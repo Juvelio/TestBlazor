@@ -1,0 +1,67 @@
+﻿@page "/"
+@page "/camara"
+
+@inject IJSRuntime JS
+
+
+<PageTitle>Camara</PageTitle>
+
+<div class="d-flex flex-column align-items-center">
+    <video class="img-thumbnail mb-3" id="video" autoplay style="height:350px;"></video>
+    <button @onclick="TakePhoto" class="btn btn-success">Tomar Foto</button>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<div>
+    @foreach (var foto in Fotos)
+    {
+        <img src="@foto" class="img-thumbnail" alt="mi foto" style="max-width: 150px; height: auto; margin-top: 10px; margin-right:10px;">
+    }
+</div>
+
+<p style="color:red">@errorMessage</p>
+
+
+@code {
+   
+    private IJSObjectReference _jsModule;
+    private List<string> Fotos { get; set; } = new List<string>();
+    private string errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/camara.js");
+            await InitializeCamera();
+        }
+    }
+
+    private async Task InitializeCamera()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            await _jsModule.InvokeVoidAsync("inicializarcamara");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error al acceder a la cámara. Por favor, verifica los permisos.";
+        }
+    }
+
+    private async Task TakePhoto()
+    {
+        try
+        {
+            var photoDataUrl = await _jsModule.InvokeAsync<string>("tomarFoto");
+            Fotos.Add(photoDataUrl);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error al tomar la foto. Inténtalo de nuevo.";
+        }
+    }  
+}
